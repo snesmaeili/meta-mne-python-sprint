@@ -3,7 +3,8 @@
 **Retitle to:** `Support variable-duration epochs`
 **Assignees to restore:** dnacombo, virvw, volerina, BelizSertcan, raphbrd
 
-Fill in the two `[link]` placeholders once the sprint repo is published.
+Links are filled in. Repo is public at
+<https://github.com/snesmaeili/meta-mne-python-sprint>.
 
 ---
 
@@ -12,8 +13,9 @@ place to work through a request that has come back repeatedly since 2016 rather
 than a sixth parallel thread: #3533, #5612, #5794, #11480, #12315.
 
 Thanks @larsoner for the sketch — replying to it below. I also built a prototype
-to test the design space ([link]). It's a probe, not something I'm proposing to
-merge.
+to test the design space ([repo](https://github.com/snesmaeili/meta-mne-python-sprint), branch
+[`ragged-epochs`](https://github.com/snesmaeili/mne-python/tree/ragged-epochs)).
+It's a probe, not something I'm proposing to merge.
 
 ### Three problems that keep getting mixed together
 
@@ -61,7 +63,8 @@ changes behaviour. Should scalar access stay valid in the uniform case?
 **On `awkward` as an optional dep.** If it's soft-imported there has to be a
 fallback that works without it, so I benchmarked three backends — list of arrays
 plus offsets, padded plus lengths, and awkward — at 2000 epochs × 128 channels,
-250 Hz, durations 0.8–1.7 s ([link]).
+250 Hz, durations 0.8–1.7 s
+([numbers and script](https://github.com/snesmaeili/meta-mne-python-sprint/blob/main/docs/06-container-benchmark.md)).
 
 The list and awkward both store only the observed samples, with effectively equal
 data-buffer payload. Padding costs about 48% more, since it materialises
@@ -89,7 +92,8 @@ warning that a method "may not behave correctly" doesn't convey that.
 I went through all 61 public `BaseEpochs` methods and classified them by whether
 they're mathematically defined by a reduction across a shared time axis. Only six
 are: `average`, `standard_error`, `iter_evoked`, `subtract_evoked`,
-`plot_image`, `plot_topo_image` ([link]). The rest are bookkeeping, spatial,
+`plot_image`, `plot_topo_image`
+([full table](https://github.com/snesmaeili/meta-mne-python-sprint/blob/main/docs/05-method-matrix.md)). The rest are bookkeeping, spatial,
 per-trial or length-changing, and wrapping those looks cheap. So the wrapper
 could apply broadly, with those six raising or taking an explicit policy.
 
@@ -136,7 +140,7 @@ a good opportunity for that.
 ## Checks before posting
 
 - [ ] rewritten in your own words
-- [ ] both `[link]` placeholders filled
+- [x] links filled and resolving
 - [ ] retitled, assignees restored
 - [ ] you can defend the six-method list and the benchmark if asked
 - [ ] no claim that the poster validates any of this

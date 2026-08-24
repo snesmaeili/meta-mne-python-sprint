@@ -120,7 +120,7 @@ decision can be revisited if a use case with genuinely nested raggedness
 **Ragged for storage, indexing, metadata and IO; dense at the point of
 computation, one epoch at a time.**
 
-This is forced, not chosen. On SciPy 1.17.1 today, `scipy.signal.spectrogram`
+This is forced, not chosen. Reproduced on SciPy 1.17.1 and 1.18.1, `scipy.signal.spectrogram`
 given a `np.ma.MaskedArray` returns a plain `ndarray` with the mask silently
 dropped and padded samples treated as real data. That was alexrockhill's blocker
 on #12315 in 2023 and it is still live. It applies identically to awkward, so it

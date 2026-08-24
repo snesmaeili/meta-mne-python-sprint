@@ -1,8 +1,11 @@
 # Container benchmark — does AwkwardArray earn a place in MNE?
 
-**Short answer: no.** On EEG-shaped ragged data, `awkward.Array` gives *zero*
-memory benefit over a plain `list[np.ndarray]` and is slower on every access
-pattern measured — including the vectorised jagged reduction it exists to do.
+**Short answer, at this scale and for these access patterns: it does not pay.**
+On EEG-shaped ragged data, `awkward.Array` matched a plain `list[np.ndarray]` on
+data-buffer payload and was slower on every access pattern measured, including
+the vectorised jagged reduction it exists to do. Serialisation, memory-mapping
+and ecosystem interop were **not** measured and are the plausible reasons to
+want it anyway.
 
 The board card names AwkwardArray, so this was worth measuring rather than
 assuming. Reported as measured. Reproduce with:
@@ -44,8 +47,10 @@ loses it by 12×.
 
 ## Why awkward loses
 
-**No memory to save.** Awkward's payload is byte-identical to the list's
-(587.4 MB both). Both store exactly the true samples and nothing else. Awkward
+**No memory to save.** Awkward's measured data-buffer payload equals the list's
+(587.4 MB both). This is the payload only: a Python list of 2000 arrays carries
+per-object overhead, and Awkward carries offset and layout buffers, neither of
+which is counted here. Both store exactly the true samples and nothing else. Awkward
 saves memory relative to *padding*, but so does a list — and the list gets there
 without a new dependency.
 
@@ -71,7 +76,7 @@ iterations of negligible cost, while each per-block NumPy call operates on
 contiguous memory. Awkward's vectorisation would need orders of magnitude more
 list elements to amortise its indirection.
 
-## The layout trap — worth flagging to maintainers
+## A layout complication worth flagging
 
 The intuitive construction is wrong, silently:
 
@@ -99,28 +104,31 @@ implemented and the wrong one is documented in `ragged_epochs/_backends.py`.
 ## Recommendation
 
 **Use `list[np.ndarray]` plus an offsets array.** Zero new dependencies,
-channel-major so it matches MNE everywhere, fastest on every access pattern,
-and identical memory to the most sophisticated alternative.
+channel-major so it matches MNE everywhere, fastest on every access pattern
+measured, and equal on data-buffer payload to the most sophisticated
+alternative.
 
 Keep **padded + explicit lengths** as the interchange and IO format — it is what
 FIF would need and what mne-connectivity #142 already shipped for its ragged
 case. Note the validity information must live in a separate `lengths` array,
-never in a `np.ma.MaskedArray`: SciPy silently strips masks (verified on 1.17.1,
-`scipy.signal.spectrogram` returns a plain `ndarray` and treats padded samples
-as real data). That is the blocker alexrockhill hit on #12315 and it is still
+never in a `np.ma.MaskedArray`: SciPy silently strips masks (reproduced on 1.17.1 and on
+1.18.1, the current release: `scipy.signal.spectrogram` returns a plain
+`ndarray` and treats padded samples as real data). That is the blocker alexrockhill hit on #12315 and it is still
 live.
 
-**This does not close the door on awkward.** If a future use case has genuinely
-nested raggedness — ragged channels *and* ragged time, as in the
-channel-specific epoch removal of #11705/#12219 — the calculus changes. The
+**This does not close the door on awkward.** #11705 and #12219 ask for
+channel-specific epoch rejection, which produces missingness along channel x
+epoch rather than a ragged time axis; #12219 runs into the same `nave`,
+covariance and source-localisation questions. That is a separate and harder
+problem, and if it is ever in scope the calculus changes. The
 finding is scoped: for one ragged axis at EEG scale, awkward costs and does not
 pay.
 
 ## Caveats
 
-- One machine, one data shape. The conclusion is robust on the memory axis
-  (identical payload is a structural fact, not a timing artefact); the timing
-  ratios will vary.
+- One synthetic microbenchmark, one machine, one data shape. The payload
+  equality is structural rather than a timing artefact; the timing ratios will
+  vary with hardware and with epoch count.
 - Serialisation and memory-mapping are not measured. Awkward's single
   contiguous buffer may do better there, which matters for the IO layer.
 - Compression is not measured. For on-disk formats, padding waste largely

@@ -1,158 +1,113 @@
-# Skeleton for issue #14206
+# Writing guide for #14206 — after larsoner's design comment
 
-**Structure and facts. Write the sentences yourself** — MNE's policy is that
-AI-generated prose should not be pasted into issue descriptions, and a reviewer
-can tell. Aim for maybe 600–900 words; the detail lives in the linked repo.
+**Write the sentences yourself.** MNE's policy is that AI-generated prose should
+not be pasted into issue or PR descriptions.
 
-Issue: https://github.com/mne-tools/mne-python/issues/14206 (currently empty)
-
-Before writing:
-- consider retitling; the current title prejudges the container question that
-  the benchmark answers negatively
-- re-add the five other assignees from the draft card: dnacombo, virvw,
-  volerina, BelizSertcan, raphbrd
+Issue: https://github.com/mne-tools/mne-python/issues/14206
+State: empty body, no assignees, one comment from @larsoner (2026-08-24).
 
 ---
 
-## Suggested sections
+## What changed
 
-### Opening — 2–3 sentences
+@larsoner posted a design sketch:
 
-State what the issue is for. Points to hit:
-- sprint board #10, converted from a draft card that had no description
-- this consolidates #3533, #5612, #5794, #11480, #12315 rather than adding a
-  sixth parallel thread — say this explicitly, it is the main risk
-- there is a working prototype and a benchmark, links at the bottom
+1. `tmin` and `tmax` allowed to be ndarray of shape `(n_events,)`
+2. FIF I/O — "cautiously optimistic it won't be too hard"
+3. `awkward` as an **optional** dep, `_soft_import`ed when `tmin`/`tmax` are ndarray
+4. Expects breakage; wrap methods with a warning plus `self.as_fixed().<meth>`,
+   where `as_fixed()` returns an `EpochsArray` with `tmin=np.min(self.tmin),
+   tmax=np.max(self.tmax)`; follow-up PRs improve methods gradually
 
-### The framing — short
+**Note what it does and does not cover.** All four points are about the
+*container* and the *migration path*. It says nothing about alignment: no
+landmark warping, no warp target, no signal-versus-TFR domain, no reduction
+semantics beyond "expect breakage".
 
-One idea: storing trials of unequal length and deciding how to compare them are
-different problems, and every previous thread merged them.
-
-Evidence that they get merged:
-- #3533 argued containers, got answered with "use rERP", which is an alignment
-  answer
-- #5612 says explicitly it is not about the container, gets pointed at #3533
-- #12315 opened as a PSD entry point, turned into a container debate
-
-Then the three-way split:
-- container — #3533, #12315
-- alignment — #5612
-- per-trial time origin — #5794, #11480, which is the special case of alignment
-  where durations happen to be equal
-
-### Why now / who wants it
-
-- #5612 open since 2018, mental arithmetic, the variable phase *is* the process
-- @drammock on #12315: variable-length spoken sentences, keyword at varying
-  latency, "recurrent on the forum"
-- #5794: tone sequences with variable inter-onset intervals
-- in #5612, @AaronWill-Git and @cbrnr independently converge in 2022 on the same
-  workaround (longer fixed epochs → `EpochsTFR` → crop → interpolate)
-- your own case: gait and table-tennis ERSP, had to reimplement epoching
-  outside MNE. If you want one concrete line, the production code carries the
-  feature request as a comment: swing cycles differ in duration by
-  construction, so they cannot be stacked into one array at all
-
-### On AwkwardArray specifically — this answers the card's question
-
-Lead with the measurement, not the conclusion.
-
-2000 epochs × 128 ch @ 250 Hz, durations 0.8–1.7 s:
-
-| backend | payload | random access | jagged reduce |
-|---|---:|---:|---:|
-| `list[np.ndarray]` + offsets | 587.4 MB | 1× | 1× |
-| padded + lengths | 870.4 MB | 5.0× slower | 1.7× slower |
-| `awkward.Array` | 587.4 MB | 759× slower | 12× slower |
-
-Points:
-- payload byte-identical to a plain list; awkward saves memory against
-  *padding*, but so does a list, without a new hard dependency
-- `reduce` is the per-epoch mean — the jagged reduction awkward exists for; all
-  three agree to 1e-16, so it is a fair comparison
-- the layout trap: `ak.Array([b.T for b in blocks])` gives
-  `n_epochs * var * var`, so the channel axis silently goes ragged too. The type
-  that enforces the invariant is `n_epochs * var * n_channels`, which is
-  time-major against MNE's channel-major convention
-- scope the finding honestly: one ragged axis at EEG scale. Ragged channels
-  *and* ragged time (#11705, #12219) would change the calculus
-
-### Scope of the change — answers the Pandora's-box objection
-
-@kingjr on #3533: supporting this means special-casing TFR, PSD, plotting,
-`times`, covariance, ICA, `nave`, stats. True if done one method at a time.
-
-Classified by mathematical meaning, `BaseEpochs`'s 61 public methods:
-- 22 bookkeeping, 12 spatial, 10 naturally ragged, 4 length-changing
-- 4 need a declared policy, 1 ragged output
-- **6 actually need a common time axis**: `average`, `standard_error`,
-  `iter_evoked`, `plot_image`, `plot_topo_image`, `subtract_evoked`
-- 2 IO
-
-48 of 61 need no cross-trial decision. Table is generated against the installed
-MNE so it stays honest.
-
-### The objections, answered by name
-
-Keep these short, one or two sentences each.
-
-- **@agramfort, #12315**: padding makes `nave` a function of time, which
-  propagates into the noise covariance used by the inverse. Answer: no automatic
-  reduction over ragged data; `average()` raises; `pad()` returns `nave` as a
-  vector rather than a scalar. Say you think this is the objection that actually
-  stopped that PR, not the SciPy one.
-- **@alexrockhill, #12315**: SciPy drops `np.ma` masks. Still true — verified on
-  SciPy 1.17.1. But it applies to awkward equally, so it argues for "dense at the
-  computation boundary", not for a particular container.
-- **@kingjr, #3533**, "just use rERP" / modern `unfold`: complementary. Give it
-  real credit — deconvolution is better when duration is a nuisance variable. It
-  does not give the ERSP of a variable-duration process aligned to its own
-  internal landmarks.
-- **@mmagnuski, #3533**, FieldTrip's variable-length trials were never that
-  useful: fair. FieldTrip built the container and not the alignment layer, so
-  users hit the wall one level later. Argues for layers 2–3, not against layer 1.
-- **mne-connectivity #142** chose padding: correct there, no time axis. Cite as
-  precedent for padding at the computation boundary.
-
-### Where to start
-
-- `Epochs` has accepted `events=None → raw.annotations.onset` since 1.7
-  (#12311), and the docstring says the durations "are ignored in this case"
-- so the ragged lengths are already in the data model and are being discarded
-- that is the smallest reviewable first step, and it is why #12315 was blocked
-  on #12311 landing
-- say what you would *not* do: `Epochs(raw, events, tmin=-0.2, tmax=[...])`,
-  because a per-epoch array silently changes the return type
-
-### Open questions — ask, don't assert
-
-This is what turns it into a discussion rather than a proposal to rubber-stamp.
-
-1. Should `times` raise on ragged data, or return the shortest common interval?
-   You think raise; a wrong time axis produces wrong results silently. Flag it as
-   the highest-risk API decision.
-2. New class, or extend `Epochs`? Prototype uses a new class to avoid changing a
-   return type, and asserts the uniform case is bit-identical to `EpochsArray`,
-   so they could merge later.
-3. FIF: pad plus a lengths tag, or a new block type?
-4. ICA and covariance weighting: sample or epoch? Note this is the interesting
-   part — fixed-length epochs make the two identical and hide the choice.
-
-### Links
-
-- prototype + benchmark + method matrix: the sprint repo
-- branch: `snesmaeili/mne-python` → `ragged-epochs`
-- note the draft PR is coming and will reference this issue
-
-### Note on @larsoner's 2023 request
-
-He asked for a dev meeting on this on #12315 and never got one. Worth one line:
-the sprint is that meeting, and this is the material for it.
+So the two designs overlap on one axis and are complementary on the rest. Write
+the issue that way: concede the overlap, then contribute what he did not cover
+and the evidence he does not have.
 
 ---
 
-## One methodological finding — include or hold?
+## Concede this one cleanly
+
+**The container should be one class with ndarray `tmin`/`tmax`, not a separate
+`RaggedEpochs`.** Say so plainly and early. Reasons worth stating, because they
+show you evaluated it rather than just agreeing:
+
+- a separate class means duplicating or awkwardly inheriting 61 public methods
+- the objection that array `tmax` silently changes what the constructor returns
+  does not survive contact — you only get arrays if you pass arrays, so it is
+  opt-in at construction, not silent
+
+Conceding fast costs nothing and buys credibility for the three positions below.
+The prototype's separate class becomes a design probe, not a proposal.
+
+One narrow question survives: once `epochs.tmin` can be an array, code that
+receives an `Epochs` from elsewhere and does scalar arithmetic on `.tmin` /
+`.tmax` changes behaviour. Ask whether scalar access should stay valid in the
+uniform case. Migration-surface question, not an objection.
+
+---
+
+## Three positions to state, not ask
+
+### P1 — On `awkward`, there is a measurement
+
+If it is `_soft_import`ed, a working fallback has to exist anyway. Measured at
+EEG scale (2000 epochs × 128 ch @ 250 Hz, durations 0.8–1.7 s), a plain list of
+arrays plus offsets stored only the observed samples — the same data-buffer
+payload as Awkward — and was substantially faster on every access and reduction
+pattern tested, including the jagged reduction Awkward exists for.
+
+State the implication: on this evidence the optional dependency may not be needed
+at all. Then name what you did **not** measure, because that is likely where his
+reasons live — serialization, memory-mapping, interop with a shared ecosystem
+representation.
+
+Wording discipline:
+
+- "data-buffer payloads were effectively equal at this scale", not "byte
+  identical" — the figure excludes Python object overhead and Awkward's
+  offset/layout buffers
+- describe it as one synthetic EEG-scale microbenchmark, environment in the
+  linked repo
+- the layout point as a schema complication, not a trap:
+  `ak.Array([b.T for b in blocks])` gives `n_epochs * var * var`, so the channel
+  axis also becomes variable; enforcing "only time is ragged" needs
+  `n_epochs * var * n_channels`, which is time-major against MNE's
+  channel-major convention
+
+### P2 — `as_fixed()` needs a carve-out, and you can name which methods
+
+The strongest technical point, and it *supports* his incremental strategy rather
+than opposing it.
+
+`as_fixed()` with `tmin=min, tmax=max` spans the union window, so shorter epochs
+get filled. That is padding, and padding is what @agramfort objected to on
+#12315: the noise level becomes time-dependent, `nave` becomes a function of
+time, the `N=` shown in plots misleads, and `nave` scales the noise covariance
+used by the inverse. A warning that a method "may not behave correctly" does not
+convey "your effective N varies across the epoch".
+
+The proposal: `warn + as_fixed()` is right for bookkeeping, spatial and plotting
+methods, and needs different handling for reductions. Only a small subset of the
+public API is mathematically defined by a reduction across a shared time axis —
+`average`, `standard_error`, `iter_evoked`, `subtract_evoked`, `plot_image`,
+`plot_topo_image`. Link the generated matrix; it is exactly the list his point 4
+needs in order to be applied selectively.
+
+Offer the prototype's policy as one option rather than the answer: `pad()`
+returns the time-resolved contributor count alongside the data, so the variation
+stays visible. Ask whether that is the right abstraction given `Evoked.nave` is
+scalar.
+
+### P3 — Alignment is the layer the sketch leaves out
+
+Say directly that his points address representation and migration, and that the
+harder half is what happens once trials of different duration have to be
+compared. Then one result that makes it concrete.
 
 Two trials, same 10 Hz oscillation, 1.0 s and 2.0 s:
 
@@ -162,20 +117,64 @@ warp signal -> TFR           10.0 Hz,  20.0 Hz
 TFR -> warp TF axis          10.0 Hz,  10.0 Hz
 ```
 
-EEGLAB `newtimef` warps after the transform, to the median landmark latencies.
-This matters if MNE ever ships time warping, because the naive implementation is
-the wrong one.
+Two sentences after it, no more. Warping the signal before the transform
+rescales the frequencies of the oscillations it carries, and it is the
+implementation someone reaches for first; EEGLAB's `newtimef` warps the
+representation instead, to the median landmark latencies. The point: alignment
+has a wrong default that looks correct, so it needs design attention rather than
+being deferred to follow-up PRs.
 
-My suggestion: put this in the **PR**, not the issue. The issue is already doing
-a lot, and this is an argument about the alignment layer rather than about
-whether to support ragged epochs at all. If you do include it here, keep it to
-the code block plus two sentences.
+This is why the three-problem separation matters — representation (#3533,
+#12315), within-trial temporal anchors (#5794 needs a different zero point per
+trial, #11480 needs a baseline defined by a *different* event in the same
+trial), and alignment/reduction (#5612). Do not call the middle one "per-trial
+time origin"; that only covers #5794. Do not say every previous thread merged
+them — #5612 tried hard to keep them separate. Safer: the discussions repeatedly
+cross between the three even when the original request concerns only one.
+
+---
+
+## Suggested shape (~700–900 words)
+
+1. **Opening (~60 words).** What the issue consolidates. Thank Eric for the
+   sketch, say you are responding to it, note there is an executable prototype
+   used to probe the design space — explicitly not a merge proposal.
+2. **Agreement on the container (~80 words).** Concede single-class,
+   ndarray-`tmin`/`tmax`, and why. Raise the scalar-access question.
+3. **The three problems (~90 words).** Sets up section 5.
+4. **Use cases (~110 words).** Mental arithmetic (#5612, open since 2018 — the
+   variable period *is* the object of study). Spoken sentences (@drammock on
+   #12315, raised against the "rare use case" argument). Tone sequences (#5794).
+   The 2022 independent rediscovery in #5612, where a gait user and the
+   arithmetic-task author converge on long fixed epoch → `EpochsTFR` → crop →
+   interpolate. Your gait work in **2–3 sentences maximum** — same architectural
+   problem, not a request for a gait feature.
+5. **P1, P2, P3 (~350 words).** The core.
+6. **Starting point (~50 words).** #12311 already builds events from
+   `raw.annotations.onset` and explicitly logs that annotation durations are
+   ignored. Precise wording: the durations are already in `Raw.annotations` and
+   `Epochs` discards them. Cheap first step that fits his direction.
+7. **Links (tiny).** Sprint repo, `ragged-epochs` branch, draft PR to follow.
+
+**Closing.** #12315 called for a dev meeting on the details; the sprint is a good
+opportunity to have it. Do not claim he never got one.
+
+---
+
+## Also do
+
+- Retitle to **`Support variable-duration epochs`**. Awkward is explicitly an
+  optional implementation detail in his sketch, so the headline overstates it.
+- Restore assignees: dnacombo, virvw, volerina, BelizSertcan, raphbrd.
 
 ## Do not claim
 
-- that the poster result validates `mne.ragged` — it came from
-  `eneuro_merged_ersp.py`, and the reproduction script has not been run
-- that 38.5% is Studnicki & Ferris's contact fraction — it is your cohort's
-  pooled median; theirs is 33.3%
+- that the poster validates `mne.ragged` — it came from `eneuro_merged_ersp.py`,
+  and the reproduction script has not been run
+- that 38.5% is Studnicki & Ferris's value — it is your cohort's pooled median;
+  theirs is 33.3%
 - that the per-trial operations are fast — they are a Python loop
-- that awkward "does not work" — it works and loses on measurement
+- that Awkward "does not work" — it works, and lost on measurement at this scale
+  in the patterns tested
+- SciPy: reproduced on **1.17.1 and 1.18.1** (1.18.1 released 2026-08-21).
+  Do not say "still true" on the basis of 1.17.1 alone.

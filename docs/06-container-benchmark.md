@@ -124,8 +124,47 @@ problem, and if it is ever in scope the calculus changes. The
 finding is scoped: for one ragged axis at EEG scale, awkward costs and does not
 pay.
 
+## Measured on real data
+
+The setup above is synthetic. The same quantity on real ds004505 swing cycles
+(3 subjects, 3934 cycles, cleaned recordings at 250 Hz, 120 channels), where a
+cycle runs from ball appearance to the next appearance:
+
+| subject | condition | cycles | median | range | padding waste |
+|---|---|---:|---:|---|---:|
+| sub-02 | machine | 1081 | 1.988 s | 1.18–4.00 | 47.6% |
+| sub-02 | human | 859 | 1.392 s | 1.02–3.82 | 60.8% |
+| sub-03 | machine | 766 | 2.009 s | 0.99–4.00 | 46.1% |
+| sub-03 | human | 696 | 1.292 s | 0.87–4.00 | 66.3% |
+| sub-05 | machine | 116 | 2.036 s | 1.11–4.00 | 48.6% |
+| sub-05 | human | 416 | 1.459 s | 1.04–3.52 | 57.2% |
+
+Pooled: median 1.898 s against the paper's 1.924 s, IQR 1.36–2.01,
+**55.5% of a padded array would be fill** — 1,684 MB of real samples inside a
+3,780 MB rectangle. The synthetic setup above assumed 32.5%, so it
+*understated* the cost of padding by a wide margin. Real trial durations are
+more skewed than a clipped normal.
+
+The gap between conditions is the interesting part: a ball machine feeds at a
+near-fixed rate, a human opponent does not, so the human condition wastes more.
+Any duration-normalising step inherits that asymmetry.
+
+### What this means for `as_fixed()`
+
+The same distribution says how badly a padded average degrades. Counting how
+many epochs still carry real data across the union window, support **halves
+within 2.3–3.0 s** and falls to a single epoch by the end. An average taken over
+that window combines up to 1081 trials at the start with one at the finish,
+under a single scalar `nave`. That is @agramfort's objection on
+`mne-tools/mne-python#12315` in measured form, and it is why `as_fixed()`
+returns the per-time-point count instead of discarding it.
+
+Reproduce with `validation/v3_v4_real_durations.py`.
+
 ## Caveats
 
+- The backend timings above are one synthetic microbenchmark on one machine;
+  the duration statistics in the section above are real.
 - One synthetic microbenchmark, one machine, one data shape. The payload
   equality is structural rather than a timing artefact; the timing ratios will
   vary with hardware and with epoch count.

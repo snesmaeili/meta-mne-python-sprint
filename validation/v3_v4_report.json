@@ -1,0 +1,123 @@
+{
+  "per_condition": [
+    {
+      "subject": "sub-02",
+      "condition": "human",
+      "n_cycles": 859,
+      "median_s": 1.3919999999998254,
+      "min_s": 1.0160000000000764,
+      "max_s": 3.8200000000001637,
+      "iqr_s": [
+        1.2639999999994416,
+        1.5309999999997217
+      ],
+      "true_samples": 322057,
+      "padded_samples": 821204,
+      "padding_waste_pct": 60.782339102098874,
+      "support_start": 859,
+      "support_end": 1,
+      "half_support_at_s": 2.396
+    },
+    {
+      "subject": "sub-02",
+      "condition": "machine",
+      "n_cycles": 1081,
+      "median_s": 1.9880000000002838,
+      "min_s": 1.1760000000003856,
+      "max_s": 3.9980000000000473,
+      "iqr_s": [
+        1.951999999999316,
+        2.0419999999994616
+      ],
+      "true_samples": 567272,
+      "padded_samples": 1082081,
+      "padding_waste_pct": 47.57582842689225,
+      "support_start": 1081,
+      "support_end": 1,
+      "half_support_at_s": 2.992
+    },
+    {
+      "subject": "sub-03",
+      "condition": "human",
+      "n_cycles": 696,
+      "median_s": 1.291999999999689,
+      "min_s": 0.8680000000003929,
+      "max_s": 3.9960000000000946,
+      "iqr_s": [
+        1.1980000000003201,
+        1.407999999999447
+      ],
+      "true_samples": 234813,
+      "padded_samples": 696000,
+      "padding_waste_pct": 66.2625,
+      "support_start": 696,
+      "support_end": 1,
+      "half_support_at_s": 2.296
+    },
+    {
+      "subject": "sub-03",
+      "condition": "machine",
+      "n_cycles": 766,
+      "median_s": 2.0090000000000146,
+      "min_s": 0.9900000000000091,
+      "max_s": 4.0,
+      "iqr_s": [
+        1.97400000000016,
+        2.0474999999999
+      ],
+      "true_samples": 413432,
+      "padded_samples": 766766,
+      "padding_waste_pct": 46.081072974023364,
+      "support_start": 766,
+      "support_end": 1,
+      "half_support_at_s": 3.0119999999999996
+    },
+    {
+      "subject": "sub-05",
+      "condition": "human",
+      "n_cycles": 416,
+      "median_s": 1.45900000000006,
+      "min_s": 1.043999999999869,
+      "max_s": 3.5200000000004366,
+      "iqr_s": [
+        1.3444999999999254,
+        1.6115000000000919
+      ],
+      "true_samples": 156889,
+      "padded_samples": 366496,
+      "padding_waste_pct": 57.192165808085214,
+      "support_start": 416,
+      "support_end": 1,
+      "half_support_at_s": 2.464
+    },
+    {
+      "subject": "sub-05",
+      "condition": "machine",
+      "n_cycles": 116,
+      "median_s": 2.036000000000058,
+      "min_s": 1.1140000000000327,
+      "max_s": 3.9960000000000946,
+      "iqr_s": [
+        2.009999999999991,
+        2.076500000000067
+      ],
+      "true_samples": 59673,
+      "padded_samples": 116000,
+      "padding_waste_pct": 48.557758620689654,
+      "support_start": 116,
+      "support_end": 1,
+      "half_support_at_s": 3.04
+    }
+  ],
+  "pooled": {
+    "n_cycles": 3934,
+    "median_s": 1.8980000000001382,
+    "min_s": 0.8680000000003929,
+    "max_s": 4.0,
+    "padding_waste_pct": 55.455424087859264,
+    "true_mb": 1683.97056,
+    "padded_mb": 3780.41664,
+    "paper_cycle_s": 1.924,
+    "sfreq": 250.0
+  }
+}

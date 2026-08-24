@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 v4_out/
 *.npz
+
+# tooling caches
+.serena/

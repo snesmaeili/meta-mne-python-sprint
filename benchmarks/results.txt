@@ -1,0 +1,15 @@
+V5 -- container backend benchmark
+==========================================================================
+2000 epochs x 128 channels @ 250 Hz, durations 0.80-1.70 s (median 1.14)
+true samples: 573,604   padded to max: 850,000   waste: 32.5%
+
+     backend  payload MB    build ms    get x500   sel epoch    sel chan     iterate    to_dense      reduce
+------------------------------------------------------------------------------------------------------------
+        list       587.4         2.1         0.1         0.2        98.1         2.1       299.0        99.2
+      padded       870.4       328.1         0.4        62.7        94.8         5.1       273.5       165.4
+     awkward       587.4     1,226.6        67.0         0.7       616.2       318.4       672.0     1,192.7
+
+  dense equivalent: 870.4 MB (1.48x the ragged payload)
+  padded   vs list: memory 1.48x, random access 5.04x, to_dense 0.91x, reduce 1.67x
+  awkward  vs list: memory 1.00x, random access 758.55x, to_dense 2.25x, reduce 12.02x
+  awkward layout: 2000 * var * 128 * float64

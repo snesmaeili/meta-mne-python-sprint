@@ -1,0 +1,63 @@
+
+========================================================================
+0. Real data, with genuinely variable trial durations
+========================================================================
+raw: 60 EEG channels @ 600.6 Hz
+annotations: 40 'trial' events, durations 0.451-0.949 s
+
+========================================================================
+1. LAYER 1 -- build from annotations, honouring duration
+========================================================================
+mne.Epochs docstring: 'the durations of the annotations are ignored in this case'
+  mne.Epochs        -> (40, 60, 572)  (one tmax for all; the variable part is gone)
+  RaggedEpochs      -> <RaggedEpochs | 40 epochs, 59 channels, 0.451-0.949 s (median 0.755), 600.615 Hz, backend=list>
+  durations         -> [0.769 0.584 0.471 0.458 0.857 0.906] ... (40 epochs)
+  total samples kept: 17,257 vs 22,800 if padded to the longest (24.3% would be padding)
+
+  ep.times raises rather than guessing:
+    These 40 epochs do not share a time axis (durations 0.451-0.949 s).
+
+========================================================================
+2. LAYER 2 -- ragged-native operations, no kernel rewrites
+========================================================================
+  average reference + baseline -> <RaggedEpochs | 40 epochs, 59 channels, 0.451-0.949 s (median 0.755), 600.615 Hz, backend=list>
+  covariance (weighting=samples) trace=2.132e-09
+  covariance (weighting=equal  ) trace=2.148e-09
+  ^ the two differ: ragged data exposes the sample-vs-epoch
+    weighting assumption that fixed-length epochs hide
+  PSD on a common grid: (59, 18), n_fft capped at the shortest epoch (271 samples)
+
+========================================================================
+3. LAYER 3 -- explicit alignment; nothing happens implicitly
+========================================================================
+  pad()  -> uniform=True, nave(t) from 40 down to 1
+           ^ agramfort's objection, handed over rather than hidden
+
+  compute_tfr refuses an impossible frequency set:
+    25 of 25 requested frequencies need a wavelet longer than the shortest epoch (477 > 271 samples).
+    The shortest epoch bounds the whole set, because every epoch must yield the same frequency axis.
+    n_cycles is proportional to freq here, so every wavelet has the same length and raising fmin will not help: lower n_cycles, or drop the shortest epochs.
+
+  compute_tfr(average=False) -> <RaggedEpochsTFR | 40 epochs, 20 freqs (11-30 Hz), 271-570 samples, output=power>
+  tfr.average() raises: Cannot average TFRs of unequal duration: time index k is not the same phase of the task in every trial. Align first:
+
+  warp_tfr(target='median') -> <RaggedEpochsTFR | 40 epochs, 20 freqs (11-30 Hz), 200 samples, output=power, aligned: piecewise-linear>
+  provenance: piecewise-linear in tfr domain -> seconds; target=median; landmarks=on/L1/L2/off
+  average() now defined -> (59, 20, 200) (n_channels, n_freqs, n_times)
+
+========================================================================
+4. Back to first-class MNE objects
+========================================================================
+  EpochsTFRArray: data (40, 59, 20, 200), times 0.000-0.756 s, 20 freqs
+  isinstance of mne.time_frequency.EpochsTFR: True
+
+========================================================================
+5. The signal-vs-TFR distinction, on this data
+========================================================================
+  signal-domain warp: warps_spectral_content=True
+  TFR-domain warp   : warps_spectral_content=False
+
+  Both produce a common axis. Only the TFR-domain one leaves the
+  frequency axis meaningful -- see tests/test_frequency_preservation.py
+
+End-to-end run complete.

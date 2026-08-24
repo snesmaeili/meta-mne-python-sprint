@@ -155,3 +155,49 @@ def test_complex_tfr_warp_preserves_phase_continuity(epochs):
     d = np.diff(np.unwrap(phase))
     assert np.median(d) > 0
     assert (d > 0).mean() > 0.95, "circular warp should preserve phase advance"
+
+
+def test_context_padding_protects_the_epoch_edges():
+    """A wavelet taper must not straddle the landmark it is meant to resolve.
+
+    Without surrounding data, the Morlet taper decays into the epoch boundary
+    and power there is badly underestimated. For landmark-warped ERSP those
+    boundaries ARE landmarks -- cycle start and cycle end -- so the artefact
+    lands precisely where the analysis is most sensitive.
+
+    Adopted from the production `eneuro_merged_ersp.py`, which computes power on
+    a 1 s padded slice "so no wavelet taper straddles the contact it is meant to
+    resolve" and only then warps.
+    """
+    sfreq, n = 250.0, 6000
+    rng = np.random.default_rng(0)
+    t = np.arange(n) / sfreq
+    sig = (np.sin(2 * np.pi * F_OSC * t) + 0.1 * rng.standard_normal(n)) * 1e-6
+    raw = mne.io.RawArray(sig[None], mne.create_info(["Cz"], sfreq, "eeg"),
+                          verbose=False)
+
+    onsets = np.arange(2.0, 20.0, 2.0)
+    durations = rng.uniform(1.0, 1.6, len(onsets))
+    freqs = np.arange(8.0, 21.0, 1.0)
+
+    bare = RaggedEpochs.from_raw(raw, onsets, durations, context=0.0)
+    padded = RaggedEpochs.from_raw(raw, onsets, durations, context=1.0)
+
+    # context changes neither the durations nor the epoch data itself
+    assert not bare.has_context and padded.has_context
+    np.testing.assert_allclose(bare.durations, padded.durations)
+    np.testing.assert_allclose(bare.get_data(0), padded.get_data(0))
+
+    p_bare = compute_tfr(bare, freqs).get_data(0)
+    p_padded = compute_tfr(padded, freqs).get_data(0)
+    assert p_bare.shape == p_padded.shape
+
+    f = int(np.argmin(np.abs(freqs - F_OSC)))
+
+    def edge_ratio(p):
+        row = p[0, f]
+        mid = row[len(row) // 3 : 2 * len(row) // 3].mean()
+        return row[:12].mean() / mid
+
+    assert edge_ratio(p_bare) < 0.6, "expected a taper artefact without context"
+    assert edge_ratio(p_padded) > 0.9, "context should restore edge power"

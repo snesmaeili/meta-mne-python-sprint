@@ -114,7 +114,13 @@ path B  TFR -> warp TF axis  [ 10.0 Hz,  10.0 Hz]
 ```
 
 Both produce a common axis; only path B reports the right frequency. This is an
-executable invariant in the prototype, not a docstring warning. Signal-domain
+executable invariant in the prototype, not a docstring warning.
+
+Path A is the mne-mobi prototype (`channel_tfr_general.warp_sig`). Our current
+production pipeline already does path B, to a group median anchor -- but it had
+to reimplement epoching outside MNE to get there, with a comment reading
+"swing cycles differ in duration by construction, so they cannot be stacked
+into one array at all". That sentence is the feature request. Signal-domain
 warping remains available — it is correct for ERP-shaped questions — but the
 result carries `alignment.warps_spectral_content == True`.
 

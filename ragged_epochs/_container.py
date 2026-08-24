@@ -55,12 +55,21 @@ class RaggedEpochs:
         metadata=None,
         alignment=None,
         backend="list",
+        context=None,
     ):
         if not isinstance(store, RaggedStore):
             store = get_backend(backend).from_list(list(store))
         self._store = store
         self.info = info
         n = len(store)
+
+        # Optional per-epoch (left, right) padding in samples, already included
+        # in the stored blocks. Kept so a wavelet taper never has to straddle a
+        # landmark; see get_data(with_context=True) and _tfr.compute_tfr.
+        if context is None:
+            self._context = np.zeros((n, 2), dtype=int)
+        else:
+            self._context = np.asarray(context, dtype=int).reshape(n, 2)
 
         if store.n_channels != len(info["ch_names"]):
             raise ValueError(
@@ -92,8 +101,18 @@ class RaggedEpochs:
 
     @property
     def lengths(self) -> np.ndarray:
-        """Per-epoch sample counts."""
-        return self._store.lengths
+        """Per-epoch sample counts of the epoch proper (context excluded)."""
+        return self._store.lengths - self._context.sum(axis=1)
+
+    @property
+    def has_context(self) -> bool:
+        """True when epochs carry surrounding data for edge-safe transforms."""
+        return bool(self._context.any())
+
+    @property
+    def context(self) -> np.ndarray:
+        """Per-epoch ``(left, right)`` context in samples."""
+        return self._context
 
     @property
     def durations(self) -> np.ndarray:
@@ -154,7 +173,8 @@ class RaggedEpochs:
             return [self.get_times(i) for i in range(len(self))]
         return self._tmin[epoch] + np.arange(self.lengths[epoch]) / self.sfreq
 
-    def get_data(self, epoch=None, *, representation="ragged", pad_value=np.nan):
+    def get_data(self, epoch=None, *, representation="ragged", pad_value=np.nan,
+                 with_context=False):
         """Return the data.
 
         Parameters
@@ -168,17 +188,32 @@ class RaggedEpochs:
             what ICA and covariance actually consume.
         """
         if epoch is not None:
-            return self._store.get(epoch)
+            return self._epoch_data(epoch, with_context)
         if representation == "ragged":
-            return [self._store.get(i) for i in range(len(self))]
+            return [self._epoch_data(i, with_context) for i in range(len(self))]
         if representation == "dense":
+            if self.has_context:
+                from ._backends import ListStore
+
+                return ListStore.from_list(
+                    [self._epoch_data(i, False) for i in range(len(self))]
+                ).to_dense(pad_value)
             return self._store.to_dense(pad_value)
         if representation == "concatenated":
-            return np.concatenate([self._store.get(i) for i in range(len(self))], axis=1)
+            return np.concatenate(
+                [self._epoch_data(i, with_context) for i in range(len(self))], axis=1
+            )
         raise ValueError(
             f"representation must be 'ragged', 'dense' or 'concatenated', "
             f"got {representation!r}"
         )
+
+    def _epoch_data(self, i, with_context=False):
+        block = self._store.get(i)
+        if with_context:
+            return block
+        lo, hi = self._context[i]
+        return block[:, lo : block.shape[1] - hi] if (lo or hi) else block
 
     # -- selection ------------------------------------------------------
     def __getitem__(self, idx):
@@ -196,6 +231,7 @@ class RaggedEpochs:
             event_id=self.event_id,
             metadata=md,
             alignment=self.alignment,
+            context=self._context[sel],
         )
 
     def pick(self, picks):
@@ -216,6 +252,7 @@ class RaggedEpochs:
             event_id=self.event_id,
             metadata=self.metadata,
             alignment=self.alignment,
+            context=self._context,
         )
 
     def copy(self):
@@ -234,6 +271,7 @@ class RaggedEpochs:
         backend="list",
         metadata=None,
         event_id=None,
+        context=0.0,
     ):
         """Extract epochs of individually specified duration from a ``Raw``.
 
@@ -241,6 +279,18 @@ class RaggedEpochs:
         natural trial at its actual length -- with the difference that the
         result stays ragged instead of being immediately warped so it can be
         stacked into an ``EpochsArray``.
+
+        Parameters
+        ----------
+        context : float
+            Seconds of surrounding recording to carry alongside each epoch, on
+            both sides. It is excluded from ``durations``, ``lengths`` and
+            ``get_data()``, and used only by transforms that would otherwise
+            have an edge effect at the epoch boundary -- notably ``compute_tfr``,
+            where a wavelet taper straddling a landmark corrupts the very
+            latency the analysis is trying to resolve. Epochs whose context
+            falls outside the recording are dropped, as their epoch proper would
+            have been by ``TOO_SHORT``.
         """
         import mne
 
@@ -251,14 +301,17 @@ class RaggedEpochs:
             raise ValueError("onsets and durations must have the same length.")
 
         pick_idx = mne.io.pick._picks_to_idx(raw.info, picks, none="data", exclude="bads")
+        n_ctx = int(round(context * sfreq))
         blocks, keep = [], []
         n_total = len(raw.times)
         for i, (onset, dur) in enumerate(zip(onsets, durations)):
             start = int(round((onset + tmin) * sfreq)) - raw.first_samp
             stop = start + int(round((dur - tmin) * sfreq))
-            if start < 0 or stop > n_total:
+            if start - n_ctx < 0 or stop + n_ctx > n_total:
                 continue  # would be TOO_SHORT in mne.Epochs; drop, same as core
-            blocks.append(raw.get_data(picks=pick_idx, start=start, stop=stop))
+            blocks.append(
+                raw.get_data(picks=pick_idx, start=start - n_ctx, stop=stop + n_ctx)
+            )
             keep.append(i)
 
         if not blocks:
@@ -281,6 +334,7 @@ class RaggedEpochs:
             events=events,
             event_id=event_id,
             metadata=md,
+            context=np.tile([n_ctx, n_ctx], (len(keep), 1)),
         )
 
     @classmethod

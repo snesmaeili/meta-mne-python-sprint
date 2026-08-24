@@ -215,6 +215,41 @@ mne-mobi's `channel_tfr_general.warp_sig` warps the **raw signal** first, then
 runs `tfr_multitaper`. Stretching a trial before the transform rescales the time
 axis its oscillations live on.
 
+> **Which generation of code these corrections are against.** C1 and C2 describe
+> the mne-mobi `old` branch. The **current production pipeline already gets both
+> right**: `/scratch/sesma/scripts/eneuro_merged_ersp.py` on fir (array job
+> 55417405, 2026-08-18, 24 subjects) computes `tfr_array_morlet` on a padded
+> slice and only then warps, onto a *group* median anchor supplied by a two-pass
+> workflow. It is EEGLAB-equivalent. The corrections matter because the stale
+> path is what a naive `time_warp_epochs` in MNE core would ship as its default,
+> not because the production analysis is wrong.
+>
+> That pipeline is also *ahead* of this prototype in three ways, two now adopted
+> here: a 1 s **context pad** so no wavelet taper straddles the landmark
+> (adopted — see `RaggedEpochs.from_raw(context=...)` and
+> `test_context_padding_protects_the_epoch_edges`); **MAD duration-outlier
+> rejection**; and per-epoch voltage rejection written specifically to avoid
+> stacking, with the comment *"swing cycles differ in duration by construction,
+> so they cannot be stacked into one array at all."* That sentence is the
+> feature request, written by a user who had to work around its absence.
+
+> **Which code these corrections are against.** C1 and C2 describe the mne-mobi
+> `old` branch (`channel_tfr_general.warp_sig`). The **current production
+> pipeline already gets both right**:
+> `/scratch/sesma/scripts/eneuro_merged_ersp.py` (fir, array job 55417405,
+> 2026-08-18, 24 subjects) computes `tfr_array_morlet` on a padded slice and
+> only then warps, onto a *group* median anchor supplied by a two-pass workflow.
+> It is EEGLAB-equivalent. The corrections matter because the stale path is what
+> a naive `time_warp_epochs` in MNE core would ship as the default, not because
+> the production analysis is wrong.
+>
+> The production code is also *ahead* of this prototype in ways now adopted
+> here: a 1 s context pad so no wavelet taper straddles the landmark, MAD-based
+> duration-outlier rejection, and per-epoch voltage rejection that explicitly
+> avoids stacking ("swing cycles differ in duration by construction, so they
+> cannot be stacked into one array at all").
+
+
 Measured, two trials carrying the same 10 Hz oscillation at 1.0 s and 2.0 s:
 
 ```

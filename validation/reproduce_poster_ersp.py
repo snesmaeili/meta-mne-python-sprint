@@ -1,29 +1,45 @@
-"""V4 -- reproduce the poster ERSP through the new API, with C1 and C2 fixed.
+"""V4 -- reproduce the poster ERSP through the new API.
 
-The mne-mobi pipeline (`channel_tfr_general.py`) produced the MoBI 2026 poster
-Figure 5 by:
+**Read this before assuming the production pipeline is wrong.** The current
+cluster code, `/scratch/sesma/scripts/eneuro_merged_ersp.py` (array job 55417405,
+2026-08-18), already gets both methodological points right:
 
-    1. find RHS->RHS gait cycles, collect 2-5 anchors each
-    2. warp the SIGNAL to a fixed length, anchors evenly spaced      <- C1, C2
-    3. tfr_multitaper on the warped signal
-    4. z-score, average across cycles
+    p   = tfr_array_morlet(padded_slice, ...)                    # TFR first
+    src = np.interp(grid, [0, hit_frac, 1], [0, t_hit - t0, dur]) # then warp
 
-This runs the same analysis through `ragged_epochs`, with both corrections:
+That is TFR-domain warping to a *group* median anchor -- the same thing EEGLAB's
+`newtimef` does. The C1/C2 corrections in this repo were written against the
+mne-mobi `old` branch (`channel_tfr_general.warp_sig`), which warps the signal
+first and spaces anchors uniformly. That code is two generations stale.
 
-    C1  warp the TFR, not the signal (EEGLAB newtimef order)
-    C2  warp to the MEDIAN anchor latencies, not evenly spaced
+What this script is for, then, is not "fix the production pipeline". It is:
 
-and computes the old path alongside, so the two can be compared directly rather
-than assumed equivalent.
+  1. Show the same analysis expressed through the proposed API, so the design is
+     judged against real work rather than a toy.
+  2. Quantify what the stale mne-mobi path would have cost, since that is the
+     failure mode a naive `time_warp_epochs` in MNE core would ship by default.
 
-**If the corrected pipeline changes the result, that is a finding to report, not
-a failure.** The poster claim under test is Studnicki & Ferris's ball contact at
-38.5% of the cycle.
+Anchor values from the completed run (not from the paper):
+
+    hit_frac_applied  0.385     <- THIS COHORT's pooled median, all 24 subjects
+    paper_hit_frac    0.3326    <- Studnicki & Ferris (640 ms of 1924 ms)
+    cohort median cycle  ~1.92 s   vs paper 1.924 s
+    per-subject hit_frac range  32.6-47.9%
+
+The poster lists 38.5% as a *deviation from* the paper, not as the paper's
+value. `--contact-pct` therefore defaults to the cohort value and the paper
+value is reported alongside it.
+
+Two-pass group anchoring, as the production code does it: run once without
+`--hit-frac` to record each subject's own median and refuse to warp, pool those
+across subjects, then run again with the group value. A single-subject median
+used as the group anchor is a silent leak -- the production code carries a
+comment about that having happened in an earlier runner.
 
 The recordings are not in this repository. Run where they live:
 
-    python validation/reproduce_poster_ersp.py \\
-        --raw /path/sub-01_task-walk_clean.fif \\
+    python validation/reproduce_poster_ersp.py \
+        --raw /path/sub-01_task-walk_clean.fif \
         --out ./out --anchors RHS LTO LHS RTO
 """
 
@@ -103,7 +119,13 @@ def main(argv=None):
     ap.add_argument("--n-freqs", type=int, default=40)
     ap.add_argument("--n-points", type=int, default=200)
     ap.add_argument("--contact-pct", type=float, default=38.5,
-                    help="published landmark position to check against")
+                    help="cohort pooled median contact position, %% of cycle "
+                         "(the completed run used 38.5; the paper's value is 33.3)")
+    ap.add_argument("--paper-contact-pct", type=float, default=33.264,
+                    help="Studnicki & Ferris value, for reference in the report")
+    ap.add_argument("--context", type=float, default=1.0,
+                    help="seconds of surrounding data carried per cycle so no "
+                         "wavelet taper straddles a landmark (production uses 1.0)")
     args = ap.parse_args(argv)
 
     out = pathlib.Path(args.out)
@@ -122,7 +144,7 @@ def main(argv=None):
     print(f"durations {durations.min():.3f}-{durations.max():.3f} s "
           f"(median {np.median(durations):.3f})")
 
-    ep = RaggedEpochs.from_raw(raw, onsets, durations)
+    ep = RaggedEpochs.from_raw(raw, onsets, durations, context=args.context)
     print(ep)
 
     names = (args.cycle_event, *args.anchors, f"{args.cycle_event}_next")
@@ -144,7 +166,10 @@ def main(argv=None):
                    landmark_names=names)
     ersp_new = new.average()
 
-    # ---- legacy path: warp the signal first, uniform target (C1 + C2) ------
+    # ---- stale mne-mobi path, for contrast only -----------------------------
+    # NOT what the cluster runs. This is `channel_tfr_general.warp_sig`: warp the
+    # signal first, anchors spaced uniformly. Computed here to quantify what a
+    # naive time_warp_epochs in MNE core would cost by default.
     old_ep = landmark_warp(ep, landmarks, target="uniform",
                            n_points=args.n_points, landmark_names=names)
     old_tfr = compute_tfr(old_ep, freqs).apply_baseline(mode="logratio")
@@ -165,7 +190,9 @@ def main(argv=None):
         "anchor_names": list(names),
         "anchor_pct_median": [float(p) for p in pct],
         "anchor_pct_uniform": [float(p) for p in uni],
-        "published_contact_pct": args.contact_pct,
+        "cohort_contact_pct": args.contact_pct,
+        "paper_contact_pct": args.paper_contact_pct,
+        "tfr_context_s": args.context,
         "peak_freq_corrected_hz": peak_freq(ersp_new),
         "peak_freq_legacy_hz": peak_freq(ersp_old),
         "max_abs_ersp_difference_db": diff,

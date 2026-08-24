@@ -218,16 +218,30 @@ def compute_tfr(epochs, freqs, *, n_cycles=None, output="power", zero_mean=True)
     # This is a constraint ragged data makes visible; fixed-length epoching has
     # it too, it is just decided once at tmin/tmax time. Fail with the number
     # the user needs rather than letting MNE report it per-epoch.
-    _check_wavelets_fit(freqs, n_cycles, sfreq, int(epochs.lengths.min()))
+    #
+    # Measured against the slice actually handed to the transform, so context
+    # padding buys real frequency headroom rather than only trimming artefacts.
+    n_min = int(epochs.lengths.min())
+    if getattr(epochs, "has_context", False):
+        n_min = int((epochs.lengths + epochs.context.sum(axis=1)).min())
+    _check_wavelets_fit(freqs, n_cycles, sfreq, n_min)
 
+    use_ctx = getattr(epochs, "has_context", False)
     out = []
     for i in range(len(epochs)):
-        d = epochs.get_data(i)[np.newaxis]  # (1, n_channels, n_times)
+        # Compute on the padded slice when context is available, then trim, so
+        # no wavelet taper straddles a landmark the analysis is meant to
+        # resolve. Without context the epoch edges carry taper artefacts -- and
+        # for landmark-warped ERSP those edges ARE landmarks.
+        d = epochs.get_data(i, with_context=use_ctx)[np.newaxis]
         tfr = tfr_array_morlet(
             d, sfreq=sfreq, freqs=freqs, n_cycles=n_cycles,
             output=output, zero_mean=zero_mean, verbose=False,
-        )
-        out.append(tfr[0])
+        )[0]
+        if use_ctx:
+            lo, hi = epochs.context[i]
+            tfr = tfr[..., lo : tfr.shape[-1] - hi] if (lo or hi) else tfr
+        out.append(tfr)
     return RaggedEpochsTFR(
         out, epochs.info, freqs, epochs.tmin, output=output,
         events=epochs.events, metadata=epochs.metadata, sfreq=sfreq,

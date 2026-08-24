@@ -1,8 +1,8 @@
 # Draft body for #14206
 
 Title is done: **Support variable-duration epochs**.
-Assignees can't be set without admin rights, so the other five are @-mentioned in
-the closing line instead.
+Assignees can't be set without admin rights. The closing line asks @drammock to
+restore them (he opened the board card) and tags the five in the meantime.
 
 All links resolve. **Read it through and make it yours before posting** — and put
 the AI-assistance disclosure on the PR when you open it, per CONTRIBUTING.md.
@@ -140,8 +140,12 @@ ndarray-`tmax` direction rather than competing with it.
    trials?
 
 #12315 suggested a dev meeting to work through the details. The sprint looks like
-a good chance to do that. cc @dnacombo @virvw @volerina @BelizSertcan @raphbrd,
-who were on the board card for this.
+a good chance to do that.
+
+@drammock — the assignees from the board card didn't carry over when the draft
+was converted to this issue, and I don't have the rights to set them. Could you
+add @dnacombo, @virvw, @volerina, @BelizSertcan and @raphbrd back? Tagging them
+here in the meantime so they see this.
 
 ---
 

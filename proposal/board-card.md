@@ -1,5 +1,7 @@
 # Support for variable-length epochs
 
+> **Working notes, not text to paste.** MNE's contributing policy asks that AI-generated prose not be pasted into issue or PR descriptions. Use this as source material and write your own words. See `WRITING-NOTES.md`.
+
 *Proposed description for sprint board #10, item "support for variable length
 epochs using AwkwardArray?"*
 

@@ -1,5 +1,7 @@
 # Cross-post for #3533 / #5612 / #5794 / #11480 / #12315
 
+> **Working notes, not text to paste.** MNE's contributing policy asks that AI-generated prose not be pasted into issue or PR descriptions. Use this as source material and write your own words. See `WRITING-NOTES.md`.
+
 Short version of [`board-card.md`](board-card.md), sized for an issue comment.
 Adjust the opening line per thread; keep the body identical so the threads
 converge rather than fork again.

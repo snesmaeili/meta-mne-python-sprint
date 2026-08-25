@@ -19,9 +19,10 @@ The decorator mechanics are separable from that either way. I can swap the
 `setattr` loops for an explicit call at the top of each affected method, so it
 reads where you would look for it. Happy to do that first.
 
-Tutorial: `sleep_physionet` fits, no new dataset needed. The hypnogram annotations
-already carry variable durations, and `tutorials/clinical/60_sleep.py` passes
-`chunk_duration=30.` to cut them into fixed epochs, which is the workaround this
-removes. I looked at openneuro-py first, but the dataset I validated against
-publishes `duration = n/a` and its cycles come from an IMU rule that does not
-belong in a tutorial.
+Tutorial: `sleep_physionet` fits, and no new dataset is needed. Its hypnogram
+annotations already carry durations, and `tutorials/clinical/60_sleep.py` passes
+`chunk_duration=30.` to cut them into fixed epochs. On SC4001 that turns 141 sleep
+stage bouts spanning 30 to 1890 s into 653 identical 30 s chunks, so the workaround
+this removes is already sitting in our own docs. I looked at openneuro-py first,
+but the dataset I validated against publishes `duration = n/a` and its cycles come
+from an IMU rule that does not belong in a tutorial.

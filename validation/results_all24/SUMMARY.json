@@ -1,0 +1,10 @@
+{
+  "n_subjects": 24,
+  "total_cycles_checked": 29546,
+  "v1_exact_all": true,
+  "retained_counts_match_all": true,
+  "worst_abs_vs_cluster_db": 0.0,
+  "reference_job": "55417405",
+  "validation_job": "56636280",
+  "note": "run on fir, the machine that produced the reference; the residual is exactly zero there, whereas a Windows workstation gave ~1e-13, which is cross-platform floating point rather than anything the container does"
+}

@@ -1,0 +1,19 @@
+[
+  {
+    "subject": "sub-25",
+    "hit_frac": 0.385,
+    "sfreq": 250.0,
+    "n_machine_cycles": 593,
+    "n_human_cycles": 792,
+    "v1_exact": true,
+    "v1_cycles_checked": 1385,
+    "human_n_ref": 713,
+    "human_n_local": 713,
+    "human_max_abs_vs_ref_db": 0.0,
+    "human_ref_scale_db": 4.616092696463383,
+    "machine_n_ref": 534,
+    "machine_n_local": 534,
+    "machine_max_abs_vs_ref_db": 0.0,
+    "machine_ref_scale_db": 5.5612903408301975
+  }
+]

@@ -67,6 +67,43 @@ def collect(stage_dir, subjects):
     return out
 
 
+#: Fractions of the epochs at which to report how far into the window the
+#: support has fallen. `support_end` on its own is close to tautological: the
+#: union endpoint is set by the longest epoch, so typically only that one
+#: reaches it.
+SUPPORT_LEVELS = (0.90, 0.75, 0.50, 0.25, 0.10)
+
+
+def support_quantiles(support, sfreq, pad=PAD, levels=SUPPORT_LEVELS):
+    """Return the time at which support first falls below each level.
+
+    Parameters
+    ----------
+    support : array
+        Number of epochs contributing at each sample.
+    sfreq : float
+        Sampling frequency in Hz.
+    pad : float
+        Context carried on each side, so times are reported relative to the
+        epoch start rather than the padded window.
+    levels : tuple of float
+        Fractions of the starting support to report.
+
+    Returns
+    -------
+    times : dict
+        Level to time in seconds, or ``None`` where support never falls that far.
+    """
+    out = {}
+    start = support[0]
+    for level in levels:
+        below = np.flatnonzero(support <= start * level)
+        out[f"t_at_{int(level * 100)}pct"] = (
+            float(below[0] / sfreq - pad) if below.size else None
+        )
+    return out
+
+
 def support_curve(durations, sfreq=SFREQ, pad=PAD):
     """Return the number of epochs covering each sample of the union window.
 
@@ -137,15 +174,17 @@ def main(argv=None):
                 support_start=int(support[0]),
                 support_end=int(support[-1]),
                 half_support_at_s=float(half / sfreq - PAD),
+                **support_quantiles(support, sfreq),
             )
+        )
+        q = support_quantiles(support, sfreq)
+        qs = "  ".join(
+            f"{k.split('_')[-1]:>5s} {('  n/a' if v is None else f'{v:5.2f}s')}"
+            for k, v in q.items()
         )
         print(
             f"{subject} {cond:8s} n={len(durations):5d} "
-            f"median {np.median(durations):.3f} s "
-            f"({durations.min():.2f}-{durations.max():.2f}) | "
-            f"padding waste {waste:5.1f}% | "
-            f"support {support[0]}->{support[-1]}, halves at "
-            f"{half / sfreq - PAD:.2f} s"
+            f"med {np.median(durations):5.3f}s  waste {waste:5.1f}%  |  {qs}"
         )
 
     pooled = np.concatenate(list(per_cond.values()))
@@ -170,6 +209,12 @@ def main(argv=None):
         f"compare  the synthetic benchmark in docs/06-container-benchmark.md "
         f"assumed 32.5%"
     )
+    pooled_support = support_curve(pooled, sfreq=sfreq)
+    pq = support_quantiles(pooled_support, sfreq)
+    print("support  " + "  ".join(
+        f"{k.split('_')[-1]} at {('n/a' if v is None else f'{v:.2f}s')}"
+        for k, v in pq.items()
+    ))
 
     summary = dict(
         per_condition=rows,
@@ -183,6 +228,7 @@ def main(argv=None):
             padded_mb=float(padded_samples * mb),
             paper_cycle_s=1.924,
             sfreq=float(sfreq),
+            **support_quantiles(support_curve(pooled, sfreq=sfreq), sfreq),
         ),
     )
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

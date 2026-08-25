@@ -1,0 +1,428 @@
+<title>Ragged Epochs Changeset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap">
+
+<style>
+  :root {
+    --paper:      #F2F5F4;
+    --card:       #FBFCFC;
+    --ink:        #16211F;
+    --muted:      #5D6C6A;
+    --rule:       #D3DBD9;
+    --fixed:      #2F6F6B;
+    --fixed-bg:   #DCEAE8;
+    --variable:   #9A6A14;
+    --variable-bg:#F0E4CB;
+    --pass:       #2E6B3E;
+    --stop:       #9E3B32;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #0F1514;
+      --card:       #161E1D;
+      --ink:        #E3EAE8;
+      --muted:      #8E9C9A;
+      --rule:       #2A3634;
+      --fixed:      #6FB8B2;
+      --fixed-bg:   #1B2E2C;
+      --variable:   #D9A441;
+      --variable-bg:#2E2617;
+      --pass:       #74B183;
+      --stop:       #D98079;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #0F1514;
+    --card:       #161E1D;
+    --ink:        #E3EAE8;
+    --muted:      #8E9C9A;
+    --rule:       #2A3634;
+    --fixed:      #6FB8B2;
+    --fixed-bg:   #1B2E2C;
+    --variable:   #D9A441;
+    --variable-bg:#2E2617;
+    --pass:       #74B183;
+    --stop:       #D98079;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 17px/1.62 "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+  .col { max-width: 65ch; }
+
+  h1, h2, h3 { font-family: "Newsreader", Georgia, serif; font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.1rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -0.01em; }
+  h2 { font-size: 1.65rem; line-height: 1.2; margin-top: 3.5rem; }
+  h3 { font-size: 1.1rem; margin-top: 2rem; }
+  p { margin: 0.9rem 0; }
+  a { color: var(--fixed); }
+
+  .eyebrow {
+    font: 700 0.72rem/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .lede { font-size: 1.15rem; color: var(--muted); margin-top: 1rem; }
+  .rule { height: 1px; background: var(--rule); border: 0; margin: 2.5rem 0 0; }
+
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.87em; }
+  code { background: var(--card); border: 1px solid var(--rule); border-radius: 3px; padding: 0.08em 0.34em; }
+
+  .headline {
+    display: flex; flex-wrap: wrap; gap: 1px; margin: 2.5rem 0 0;
+    background: var(--rule); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden;
+  }
+  .stat { flex: 1 1 140px; background: var(--card); padding: 1rem 1.1rem; }
+  .stat b { display: block; font: 700 1.5rem/1.1 "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+  .stat span { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+  .stat.ok b { color: var(--pass); }
+
+  figure { margin: 2rem 0; }
+  .bleed { max-width: 100%; overflow-x: auto; }
+  figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 0.7rem; max-width: 62ch; }
+  svg { display: block; }
+  svg text { font-family: "Source Sans 3", sans-serif; font-size: 13px; fill: var(--ink); }
+  svg .lbl { font-family: "JetBrains Mono", monospace; font-size: 11.5px; }
+  svg .dim { fill: var(--muted); }
+
+  table { border-collapse: collapse; width: 100%; margin: 1.4rem 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font: 700 0.72rem/1 "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; text-align: right; }
+
+  .tag { font: 700 0.68rem/1 "JetBrains Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase;
+         padding: 0.22em 0.5em; border-radius: 3px; white-space: nowrap; }
+  .tag.fx { background: var(--fixed-bg); color: var(--fixed); }
+  .tag.vr { background: var(--variable-bg); color: var(--variable); }
+  .tag.st { background: var(--card); color: var(--stop); border: 1px solid var(--rule); }
+
+  .note { border-left: 3px solid var(--variable); background: var(--card); padding: 0.9rem 1.1rem; margin: 1.6rem 0; border-radius: 0 5px 5px 0; }
+  .note p { margin: 0.35rem 0; }
+  .note strong { color: var(--variable); }
+
+  ol.steps { list-style: none; padding: 0; counter-reset: s; }
+  ol.steps li { counter-increment: s; padding: 0.65rem 0 0.65rem 2.6rem; border-bottom: 1px solid var(--rule); position: relative; }
+  ol.steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 0.72rem;
+    font: 700 0.72rem/1.55 "JetBrains Mono", monospace;
+    width: 1.7rem; height: 1.7rem; text-align: center; border-radius: 50%;
+    background: var(--card); border: 1px solid var(--rule); color: var(--muted);
+  }
+  ol.steps li.now::before { background: var(--fixed); border-color: var(--fixed); color: var(--paper); }
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <div class="eyebrow">mne-python · pull request 14210</div>
+  <h1>Epochs that don&rsquo;t all last the same</h1>
+  <p class="lede">A walk through the changeset: which code paths exist now, what every
+  method does when durations vary, and what the validation against 24 real recordings
+  actually showed.</p>
+</header>
+
+<div class="headline">
+  <div class="stat"><b>1103</b><span>lines added, 43 removed</span></div>
+  <div class="stat"><b>21</b><span>methods given a defined behaviour</span></div>
+  <div class="stat ok"><b>29,546</b><span>real cycles round-tripped exactly</span></div>
+  <div class="stat ok"><b>0.0 dB</b><span>difference from the reference run</span></div>
+</div>
+
+<hr class="rule">
+
+<section class="col">
+<h2>One class, two paths</h2>
+<p>The change adds no new class. <code>Epochs</code> already takes <code>tmin</code> and
+<code>tmax</code>; those may now be arrays with one entry per event. Everything downstream
+turns on a single boolean, <code>_variable_duration</code>, decided once at construction.</p>
+<p>Bounds that are arrays but carry no actual variation collapse back to scalars. That
+matters more than it sounds: it means passing <code>np.full(n, -0.2)</code> behaves exactly
+like passing <code>-0.2</code>, so nothing existing changes behaviour by accident.</p>
+</section>
+
+<figure class="bleed">
+<svg viewBox="0 0 1000 300" width="1000" height="300" role="img" aria-label="Construction dispatch: array bounds with real variation take the variable path, everything else takes the scalar path">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,1 L8,4.5 L0,8 z" fill="var(--muted)"/>
+    </marker>
+  </defs>
+  <rect x="12" y="112" width="196" height="72" rx="6" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="110" y="140" text-anchor="middle" class="lbl">Epochs(raw, events,</text>
+  <text x="110" y="158" text-anchor="middle" class="lbl">tmin, tmax, …)</text>
+  <text x="110" y="176" text-anchor="middle" class="lbl dim">EpochsArray(data, …)</text>
+
+  <line x1="212" y1="148" x2="272" y2="148" stroke="var(--muted)" marker-end="url(#ar)"/>
+
+  <rect x="276" y="104" width="212" height="88" rx="6" fill="var(--card)" stroke="var(--rule)"/>
+  <text x="382" y="132" text-anchor="middle">_check_variable_bounds</text>
+  <text x="382" y="152" text-anchor="middle" class="lbl dim">arrays? lengths match?</text>
+  <text x="382" y="170" text-anchor="middle" class="lbl dim">any real variation?</text>
+
+  <path d="M492,132 L560,132 L560,62" stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+  <path d="M492,164 L560,164 L560,232" stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+  <text x="516" y="106" class="lbl dim">no</text>
+  <text x="516" y="200" class="lbl dim">yes</text>
+
+  <rect x="566" y="26" width="418" height="72" rx="6" fill="var(--fixed-bg)" stroke="var(--fixed)"/>
+  <text x="590" y="52" style="fill:var(--fixed)" font-weight="600">Scalar path &mdash; untouched</text>
+  <text x="590" y="74" class="lbl">_data is one (n_epochs, n_ch, n_times) array</text>
+  <text x="590" y="90" class="lbl dim">every existing test passes unchanged</text>
+
+  <rect x="566" y="236" width="418" height="52" rx="6" fill="var(--variable-bg)" stroke="var(--variable)"/>
+  <text x="590" y="260" style="fill:var(--variable)" font-weight="600">Variable path &mdash; new</text>
+  <text x="590" y="280" class="lbl">_data is a list of (n_ch, n_times_i) arrays</text>
+
+  <rect x="566" y="120" width="418" height="100" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="3 3"/>
+  <text x="590" y="144" class="lbl dim">kept per epoch:</text>
+  <text x="590" y="164" class="lbl">_tmin_per_epoch, _tmax_per_epoch</text>
+  <text x="590" y="184" class="lbl dim">exposed as:</text>
+  <text x="590" y="204" class="lbl">tmin, tmax, durations, get_times(i)</text>
+</svg>
+</figure>
+
+<section class="col">
+<h2>What each method does now</h2>
+<p>Before this, an audit of the public API on variable-duration epochs found thirteen
+methods failing with errors like <code>'list' object has no attribute 'shape'</code>, and
+<code>shift_time</code> quietly returning epochs it had not shifted. Neither is a reasonable
+thing to hand a user.</p>
+<p>Every public method now falls into one of three groups. The split is not arbitrary: it
+follows what the operation means, not how hard it was to fix.</p>
+</section>
+
+<figure class="bleed">
+<svg viewBox="0 0 1000 320" width="1000" height="320" role="img" aria-label="Method dispatch: runs natively, raises for a policy, raises as not implemented, or warns and falls back">
+  <rect x="12" y="128" width="150" height="58" rx="6" fill="var(--variable-bg)" stroke="var(--variable)"/>
+  <text x="87" y="153" text-anchor="middle" class="lbl">epochs.method()</text>
+  <text x="87" y="172" text-anchor="middle" class="lbl dim">durations vary</text>
+
+  <path d="M166,142 L206,142 L206,44"  stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+  <path d="M166,150 L206,150 L206,116" stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+  <path d="M166,164 L206,164 L206,198" stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+  <path d="M166,172 L206,172 L206,270" stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+
+  <rect x="212" y="14" width="772" height="58" rx="6" fill="var(--card)" stroke="var(--fixed)"/>
+  <text x="234" y="38" font-weight="600" style="fill:var(--fixed)">Runs natively &mdash; durations preserved</text>
+  <text x="234" y="59" class="lbl dim">pick &middot; drop &middot; __getitem__ &middot; shift_time &middot; get_data &middot; copy &middot; durations &middot; get_times &middot; as_fixed</text>
+
+  <rect x="212" y="86" width="772" height="58" rx="6" fill="var(--card)" stroke="var(--stop)"/>
+  <text x="234" y="110" font-weight="600" style="fill:var(--stop)">Raises, asking for a policy &mdash; 6</text>
+  <text x="234" y="131" class="lbl dim">average &middot; standard_error &middot; subtract_evoked &middot; iter_evoked &middot; compute_tfr &middot; compute_psd</text>
+
+  <rect x="212" y="168" width="772" height="58" rx="6" fill="var(--card)" stroke="var(--stop)"/>
+  <text x="234" y="192" font-weight="600" style="fill:var(--stop)">Raises, not implemented yet &mdash; 9</text>
+  <text x="234" y="213" class="lbl dim">filter &middot; apply_baseline &middot; crop &middot; decimate &middot; resample &middot; plot_image &middot; plot_topo_image &middot; save &middot; export</text>
+
+  <rect x="212" y="250" width="772" height="58" rx="6" fill="var(--card)" stroke="var(--variable)"/>
+  <text x="234" y="274" font-weight="600" style="fill:var(--variable)">Warns, then runs on as_fixed() &mdash; 2</text>
+  <text x="234" y="295" class="lbl dim">plot &middot; to_data_frame &mdash; inspection only, where the padding is visible to whoever is looking</text>
+</svg>
+</figure>
+
+<section class="col">
+<p>The first version of this changeset had every method in the third and fourth
+groups warn and run on a padded copy, which is the migration path suggested in the
+issue. Measuring it changed the design. <code>average()</code> on realistic durations
+returns a result that is 44% NaN &mdash; one short epoch takes out a whole time point
+&mdash; while <code>nave</code> still reports the full count. And
+<code>compute_tfr()</code> padded before transforming, which is the reverse of the
+order this work argues for, on a path no test covered.</p>
+<p>So only inspection falls back now. Anything numeric either works on the ragged
+data or says why it will not. The distinction inside the two raising groups matters
+for the reader: a reduction needs a decision from you, whereas <code>filter</code>
+is simply per-trial work nobody has written yet.</p>
+</section>
+
+<section class="col">
+<h2>There is no shared time axis, so <code>times</code> says so</h2>
+<p><code>epochs.times</code> raises when durations vary. The alternative was to return
+the union of all epochs, which is what an earlier version did &mdash; but that leaves
+<code>len(epochs.times) == data.shape[-1]</code> false while looking perfectly ordinary,
+and that is how silent errors get made downstream.</p>
+<p><code>get_times(i)</code> gives one epoch&rsquo;s real axis; <code>as_fixed().times</code>
+gives the padded common one. Both are explicit about which you asked for.</p>
+</section>
+
+<section class="col">
+<h2>What <code>as_fixed()</code> costs</h2>
+<p>It pads every epoch to span the union window and returns the padded copy together with
+the number of epochs still carrying real data at each sample. That second return value is
+the point of the method.</p>
+</section>
+
+<figure class="bleed">
+<svg viewBox="0 0 1000 320" width="1000" height="320" role="img" aria-label="Real cycle durations from one subject, and how the contributing-epoch count collapses across the padded window">
+  <text x="12" y="20" font-weight="600">12 real cycles, drawn to scale</text>
+  <text x="12" y="38" class="lbl dim">ball-machine condition, sub-02</text>
+  <g>
+    <rect x="12" y="52" width="420" height="152" fill="var(--card)" stroke="var(--rule)"/>
+    <rect x="12" y="52" width="414" height="12" fill="var(--variable)"/>
+    <rect x="12" y="65" width="399" height="12" fill="var(--variable)"/>
+    <rect x="12" y="78" width="231" height="12" fill="var(--variable)"/>
+    <rect x="12" y="91" width="221" height="12" fill="var(--variable)"/>
+    <rect x="12" y="104" width="220" height="12" fill="var(--variable)"/>
+    <rect x="12" y="117" width="214" height="12" fill="var(--variable)"/>
+    <rect x="12" y="130" width="207" height="12" fill="var(--variable)"/>
+    <rect x="12" y="143" width="207" height="12" fill="var(--variable)"/>
+    <rect x="12" y="156" width="206" height="12" fill="var(--variable)"/>
+    <rect x="12" y="169" width="205" height="12" fill="var(--variable)"/>
+    <rect x="12" y="182" width="204" height="12" fill="var(--variable)"/>
+    <rect x="12" y="195" width="202" height="12" fill="var(--variable)"/>
+    <line x1="432" y1="46" x2="432" y2="212" stroke="var(--stop)" stroke-dasharray="3 3"/>
+    <text x="424" y="232" text-anchor="end" class="lbl dim">everything right of the longest cycle is fill</text>
+  </g>
+  <text x="12" y="264" class="lbl">47.6%</text>
+  <text x="62" y="264" class="lbl dim">of a padded array is fill, this condition</text>
+  <text x="12" y="284" class="lbl">54.8%</text>
+  <text x="62" y="284" class="lbl dim">pooled over all 24 subjects &mdash; the synthetic estimate had said 32.5%</text>
+
+  <text x="530" y="20" font-weight="600">Epochs still contributing, across the window</text>
+  <text x="530" y="38" class="lbl dim">pooled, all 24 subjects, 29,546 cycles</text>
+  <g transform="translate(530,52)">
+    <rect x="0" y="0" width="454" height="152" fill="var(--card)" stroke="var(--rule)"/>
+    <line x1="0" y1="76" x2="454" y2="76" stroke="var(--rule)" stroke-dasharray="2 4"/>
+    <text x="4" y="72" class="lbl dim">50%</text>
+    <polyline fill="none" stroke="var(--fixed)" stroke-width="2.5"
+      points="0.0,0.0 6.8,0.0 14.1,0.0 21.3,0.0 28.6,0.0 35.9,0.0 43.1,0.0 50.4,0.0 57.2,0.0 64.5,0.0 71.7,0.0 79.0,0.0 86.3,0.0 93.5,0.1 100.8,0.2 108.1,0.4 114.9,0.9 122.1,2.5 129.4,5.6 136.7,10.1 143.9,16.8 151.2,25.8 158.4,35.0 165.7,43.9 172.5,51.3 179.8,58.4 187.0,63.7 194.3,68.1 201.6,71.3 208.8,73.8 216.1,75.9 223.4,84.4 230.2,110.3 237.4,132.8 244.7,141.9 252.0,144.3 259.2,145.1 266.5,145.4 273.8,145.6 281.0,145.6 287.8,145.7 295.1,145.8 302.4,145.8 309.6,145.9 316.9,145.9 324.2,146.0 331.4,146.0 338.7,146.1 345.5,146.2 352.8,146.2 360.0,146.3 367.3,146.4 374.5,146.4 381.8,146.5 389.1,146.6 396.3,146.7 403.2,146.8 410.4,146.9 417.7,147.0 424.9,147.0 432.2,147.3 439.5,147.8 446.7,149.4 454.0,151.9"/>
+    <text x="454" y="168" text-anchor="end" class="lbl dim">end of union window</text>
+  </g>
+  <text x="530" y="264" class="lbl">90% &rarr; 10%</text>
+  <text x="618" y="264" class="lbl dim">in 0.86 s &mdash; a cliff, not a slope</text>
+  <text x="530" y="284" class="lbl">one nave</text>
+  <text x="618" y="284" class="lbl dim">is all an averaged Evoked can carry</text>
+</svg>
+<figcaption>Pooled over 29,546 real cycles: support sits at 90% until
+2.26&nbsp;s and reaches 10% by 3.11&nbsp;s. The ball machine drives
+the cliff &mdash; it feeds at a near-fixed rate, so most cycles cluster and a small tail runs
+long. Averaging across the padded window combines nearly every trial at the start with a
+handful at the end, under one scalar <code>nave</code>. This is why the reductions ask for a
+policy instead of padding quietly.</figcaption>
+</figure>
+
+<div class="note col">
+  <p><strong>Why the count is returned rather than dropped.</strong> This is the objection
+  raised against padding on the earlier PR &mdash; that the noise level becomes
+  time-dependent and <code>nave</code> stops describing it. Returning the per-sample count
+  makes the shortfall visible instead of hiding it behind one number.</p>
+</div>
+
+<section class="col">
+<h2>The changeset</h2>
+<p>Everything lives in <code>mne/epochs.py</code> plus one new test file. No other module
+is touched.</p>
+<table>
+  <thead><tr><th>Added</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_check_variable_bounds</td><td>Normalises <code>tmin</code>/<code>tmax</code>, collapses no-variation arrays back to scalars</td></tr>
+    <tr><td class="mono">_check_variable_data</td><td>Enforces that only the time axis varies; a differing channel count is refused</td></tr>
+    <tr><td class="mono">_check_variable_unsupported</td><td>Rejects baseline, reject windows, decim and lazy loading with a reason</td></tr>
+    <tr><td class="mono">_is_variable_duration_data</td><td>Detects a ragged list handed to <code>EpochsArray</code></td></tr>
+    <tr><td class="mono">durations, get_times,<br>variable_duration, as_fixed</td><td>The public surface; <code>tmin</code>/<code>tmax</code> now return arrays on the variable path</td></tr>
+    <tr><td class="mono">_load_variable_from_raw</td><td>Reads each epoch at its own length, keeping the drop bookkeeping</td></tr>
+    <tr><td class="mono">_n_times_per_epoch</td><td>Lets the <code>TOO_SHORT</code> check compare against the right length</td></tr>
+    <tr><td class="mono">_VARIABLE_FALLBACK<br>_VARIABLE_NOT_IMPLEMENTED</td><td>The two tables that decide the three behaviours above</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section class="col">
+<h2>How it was checked</h2>
+<p>The prior ERSP analysis of a table-tennis dataset already existed, computed on a
+cluster from the same recordings. That made a strong test available: put the same real
+cycles through the new container and see whether the published maps come back.</p>
+</section>
+
+<figure class="bleed">
+<svg viewBox="0 0 1000 190" width="1000" height="190" role="img" aria-label="Validation pipeline comparing the container path against the existing reference maps">
+  <g>
+    <rect x="12" y="20" width="150" height="54" rx="6" fill="var(--card)" stroke="var(--rule)"/>
+    <text x="87" y="42" text-anchor="middle" class="lbl">cleaned raw</text>
+    <text x="87" y="60" text-anchor="middle" class="lbl dim">24 subjects</text>
+    <line x1="166" y1="47" x2="212" y2="47" stroke="var(--muted)" marker-end="url(#ar)"/>
+
+    <rect x="216" y="20" width="160" height="54" rx="6" fill="var(--card)" stroke="var(--rule)"/>
+    <text x="296" y="42" text-anchor="middle" class="lbl">swing cycles</text>
+    <text x="296" y="60" text-anchor="middle" class="lbl dim">29,546 total</text>
+    <path d="M380,47 L410,47 L410,110 L442,110" stroke="var(--muted)" fill="none" marker-end="url(#ar)"/>
+    <line x1="380" y1="47" x2="442" y2="47" stroke="var(--muted)" marker-end="url(#ar)"/>
+
+    <rect x="446" y="20" width="180" height="54" rx="6" fill="var(--variable-bg)" stroke="var(--variable)"/>
+    <text x="536" y="42" text-anchor="middle" class="lbl">variable Epochs</text>
+    <text x="536" y="60" text-anchor="middle" class="lbl dim">the code under test</text>
+
+    <rect x="446" y="84" width="180" height="52" rx="6" fill="var(--card)" stroke="var(--rule)"/>
+    <text x="536" y="106" text-anchor="middle" class="lbl">raw array slice</text>
+    <text x="536" y="124" text-anchor="middle" class="lbl dim">what the job did</text>
+
+    <line x1="630" y1="47" x2="676" y2="47" stroke="var(--muted)" marker-end="url(#ar)"/>
+    <path d="M630,110 L654,110 L654,47" stroke="var(--muted)" fill="none"/>
+
+    <rect x="680" y="20" width="150" height="54" rx="6" fill="var(--card)" stroke="var(--rule)"/>
+    <text x="755" y="42" text-anchor="middle" class="lbl">Morlet + warp</text>
+    <text x="755" y="60" text-anchor="middle" class="lbl dim">identical code</text>
+    <line x1="834" y1="47" x2="880" y2="47" stroke="var(--muted)" marker-end="url(#ar)"/>
+
+    <rect x="884" y="20" width="100" height="54" rx="6" fill="var(--card)" stroke="var(--pass)"/>
+    <text x="934" y="42" text-anchor="middle" class="lbl" style="fill:var(--pass)">compare</text>
+    <text x="934" y="60" text-anchor="middle" class="lbl dim">vs saved</text>
+
+    <text x="12" y="168" class="lbl dim">Both branches read the same samples by construction, so any difference would be the container&rsquo;s doing.</text>
+  </g>
+</svg>
+</figure>
+
+<table>
+  <thead><tr><th>Check</th><th>Result</th><th class="num">Scope</th></tr></thead>
+  <tbody>
+    <tr><td>Every epoch matches the raw slice it came from</td><td><span class="tag fx">exact</span></td><td class="num">29,546 cycles</td></tr>
+    <tr><td>ERSP against the existing reference maps</td><td><span class="tag fx">0.000e+00 dB</span></td><td class="num">24 subjects</td></tr>
+    <tr><td>Retained epoch counts per subject and condition</td><td><span class="tag fx">all match</span></td><td class="num">48 pairs</td></tr>
+    <tr><td>Existing <code>test_epochs.py</code></td><td><span class="tag fx">unchanged</span></td><td class="num">280 tests</td></tr>
+  </tbody>
+</table>
+
+<div class="note col">
+  <p><strong>One detail worth keeping.</strong> Run on a laptop the difference was about
+  1e-13&nbsp;dB, not zero. Run on the machine that produced the reference it is exactly
+  zero. The residual was cross-platform floating point, not the container &mdash; which is
+  only demonstrable by running it in the same place.</p>
+</div>
+
+<section class="col">
+<h2>What is deliberately not done</h2>
+<p>This is the first of several changes, not the whole feature. The order is chosen so
+each step is small enough to review on its own.</p>
+<ol class="steps">
+  <li class="now"><strong>Container, <code>as_fixed()</code>, and the dispatch above.</strong> This changeset.</li>
+  <li>Duration-preserving operations natively: <code>__getitem__</code>, <code>pick</code>, <code>drop</code>, <code>shift_time</code>. Currently raising.</li>
+  <li>Per-trial operations natively: <code>filter</code>, <code>apply_baseline</code>, <code>detrend</code>. Currently falling back.</li>
+  <li><code>compute_tfr</code> and <code>compute_psd</code> with a stated policy for the frequency grid.</li>
+  <li>FIF reading and writing.</li>
+  <li>What the reductions should do about a contributing count that varies over time.</li>
+</ol>
+</section>
+
+<section class="col">
+<h2>Three things a reviewer may push on</h2>
+<h3>Should <code>times</code> raise instead?</h3>
+<p>It currently spans the union of all epochs, which agrees with what <code>as_fixed()</code>
+produces. The alternative is to refuse, on the grounds that a plausible-but-wrong time axis
+is how quiet errors happen. Left open in the issue on purpose.</p>
+<h3>Arrays on an existing argument</h3>
+<p>Passing <code>tmax</code> as an array changes what the object is. The counter is that it
+is opt-in at construction, and a separate class would mean duplicating sixty-odd methods.</p>
+<h3>Padding under the reductions</h3>
+<p>Falling back to <code>as_fixed()</code> for <code>average</code> is convenient and also
+reintroduces exactly the problem the earlier PR stalled on. The warning says so, and the
+per-sample count is returned, but whether that is enough is a real question.</p>
+</section>
+
+</div>

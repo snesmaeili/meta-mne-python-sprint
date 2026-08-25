@@ -316,8 +316,10 @@ policy instead of padding quietly.</figcaption>
 
 <section class="col">
 <h2>The changeset</h2>
-<p>Everything lives in <code>mne/epochs.py</code> plus one new test file. No other module
-is touched.</p>
+<p>Most of it lives in <code>mne/epochs.py</code> plus one new test file. Two shared
+modules carry a ragged branch each: <code>mne/utils/mixin.py</code> (<code>_getitem</code>,
+<code>shift_time</code>) and <code>mne/channels/channels.py</code>
+(<code>_pick_drop_channels</code>). Six files in all.</p>
 <table>
   <thead><tr><th>Added</th><th>What it does</th></tr></thead>
   <tbody>
@@ -328,7 +330,7 @@ is touched.</p>
     <tr><td class="mono">durations, get_times,<br>variable_duration, as_fixed</td><td>The public surface; <code>tmin</code>/<code>tmax</code> now return arrays on the variable path</td></tr>
     <tr><td class="mono">_load_variable_from_raw</td><td>Reads each epoch at its own length, keeping the drop bookkeeping</td></tr>
     <tr><td class="mono">_n_times_per_epoch</td><td>Lets the <code>TOO_SHORT</code> check compare against the right length</td></tr>
-    <tr><td class="mono">_VARIABLE_FALLBACK<br>_VARIABLE_NOT_IMPLEMENTED</td><td>The two tables that decide the three behaviours above</td></tr>
+    <tr><td class="mono">_VARIABLE_FALLBACK<br>_VARIABLE_NEEDS_POLICY<br>_VARIABLE_NOT_IMPLEMENTED</td><td>The three tables that decide the four behaviours above, covering 17 methods</td></tr>
   </tbody>
 </table>
 </section>
@@ -401,9 +403,10 @@ cycles through the new container and see whether the published maps come back.</
 <p>This is the first of several changes, not the whole feature. The order is chosen so
 each step is small enough to review on its own.</p>
 <ol class="steps">
-  <li class="now"><strong>Container, <code>as_fixed()</code>, and the dispatch above.</strong> This changeset.</li>
-  <li>Duration-preserving operations natively: <code>__getitem__</code>, <code>pick</code>, <code>drop</code>, <code>shift_time</code>. Currently raising.</li>
-  <li>Per-trial operations natively: <code>filter</code>, <code>apply_baseline</code>, <code>detrend</code>. Currently falling back.</li>
+  <li class="now"><strong>Container, <code>as_fixed()</code>, the dispatch above, and the
+  duration-preserving operations natively &mdash; <code>__getitem__</code>, <code>pick</code>,
+  <code>drop</code>, <code>shift_time</code>.</strong> This changeset.</li>
+  <li>Per-trial operations natively: <code>filter</code>, <code>apply_baseline</code>, <code>crop</code>, <code>decimate</code>, <code>resample</code>. Currently raising.</li>
   <li><code>compute_tfr</code> and <code>compute_psd</code> with a stated policy for the frequency grid.</li>
   <li>FIF reading and writing.</li>
   <li>What the reductions should do about a contributing count that varies over time.</li>
@@ -412,10 +415,12 @@ each step is small enough to review on its own.</p>
 
 <section class="col">
 <h2>Three things a reviewer may push on</h2>
-<h3>Should <code>times</code> raise instead?</h3>
-<p>It currently spans the union of all epochs, which agrees with what <code>as_fixed()</code>
-produces. The alternative is to refuse, on the grounds that a plausible-but-wrong time axis
-is how quiet errors happen. Left open in the issue on purpose.</p>
+<h3>Is raising from <code>times</code> the right call?</h3>
+<p>It refuses when durations vary. The alternative is to return the union of all epochs,
+which is what <code>as_fixed()</code> produces &mdash; convenient, but it leaves
+<code>len(epochs.times) == data.shape[-1]</code> false while looking entirely ordinary, and
+that is how quiet errors happen. The union is still reachable through
+<code>as_fixed().times</code>. Left open in the issue on purpose.</p>
 <h3>Arrays on an existing argument</h3>
 <p>Passing <code>tmax</code> as an array changes what the object is. The counter is that it
 is opt-in at construction, and a separate class would mean duplicating sixty-odd methods.</p>

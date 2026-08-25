@@ -29,17 +29,40 @@ while `nave` reports 43 where 3 epochs remain — one short epoch takes out the
 whole time point. `compute_tfr` was worse: it padded and then transformed, which
 is the reverse of the order argued for in the issue.
 
+**Tutorial.** `tutorials/epochs/70_variable_duration_epochs.py` builds epochs
+straight from the Sleep Physionet hypnogram durations, so no new dataset is
+needed and `tools/circleci_download.sh` already prefetches it. Bouts over five
+minutes are set aside to keep the padded array small, leaving 130 epochs from
+30 to 300 s. It walks through what the object holds, which operations are
+unaffected by ragged trials, which ones refuse and why, and closes on the
+contributing-count curve from `as_fixed()`: 130 epochs at t=0 falling to 1 by
+300 s, which is the reason `average()` cannot return an ordinary `Evoked`. The
+last section points at `tut-sleep-stage-classif`, where fixed 30 s windows are
+the right representation, so the two are not read as competing.
+
+**Two defects the tutorial found.** Both are fixed here with regression tests
+that fail without the fix.
+
+- `load_data()` set `_raw_times` from `self.times`, which refuses once durations
+  vary, so `Epochs(raw, ...)` failed outright. Every existing test built through
+  `EpochsArray`, so the path from `Raw` had no coverage at all.
+- `GetEpochsMixin._item_to_select` returns slices untouched, so `epochs[:10]`
+  iterated `np.atleast_1d(slice)`, which yields the slice itself. The data list
+  came back holding one nested list and the bounds subsetting then raised on it.
+  String and array indexing were unaffected, which is why it stayed hidden.
+
 **What was validated.** Construction and extraction, plus a per-epoch TFR
 pipeline built on `get_data()`. On all 24 ds004505 subjects (29,546 swing
 cycles), every epoch is byte-identical to the raw slice it came from, and
 re-running an existing ERSP analysis through the container reproduces the
-previously computed maps at 0.000e+00 dB with matching retained counts. Scripts
+previously computed maps at 0.000e+00 dB with matching retained counts. The
+tutorial repeats the byte-identity check on annotated sleep recordings. Scripts
 and per-subject reports:
 https://github.com/snesmaeili/meta-mne-python-sprint/tree/main/validation
 
 This does not validate any padded path — the methods that would need one raise.
 
-`mne/tests/test_epochs.py` passes unchanged; 461 tests pass across epochs,
+`mne/tests/test_epochs.py` passes unchanged; 469 tests pass across epochs,
 channels and docstrings.
 
 Open questions are in #14206: whether `tmin`/`tmax` should stay scalar with

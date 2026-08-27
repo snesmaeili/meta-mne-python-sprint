@@ -112,6 +112,16 @@ Also checked what it warns about: nothing ragged-specific is pixel-positioned (r
 clean at five window sizes down to 2-px epochs), and nothing new is stored on `self.mne`
 that `closeEvent` would need to drop — the branch adds only arrays and a float.
 
+Your colour caution is right, and worth stating more sharply than "offscreen" in that file.
+`_qt_get_stylesheet` returns an **empty stylesheet** — a silent no-op — in three cases:
+`theme="auto"`, `theme == system_theme`, or qdarkstyle missing (which only `logger.info`s,
+so nothing surfaces). So on a host whose OS theme is already dark, `theme="dark"` matches
+the system, the stylesheet is empty, and the widget inherits a platform palette that under
+offscreen/xvfb does not exist — you get a light render you believe is dark. On a
+*light*-themed host with qdarkstyle installed it works, which is how one of my slices
+initially concluded the caution was wrong. The robust instruction is to assert
+`fig.mne.dark` before trusting a dark screenshot, rather than to trust the platform.
+
 **@larsoner, the diff size.** Stripping private-helper docstrings to their first line is
 worth **~199 lines** in mne-python across 13 helpers new in this branch, and ~99 in
 mne-qt-browser. Three helpers are excluded because they predate the PR, where removing a

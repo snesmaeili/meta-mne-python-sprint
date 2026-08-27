@@ -137,11 +137,22 @@ computed from the source arrays.
   separator pixel positions matched the recomputed expectation to **two decimals at every
   size**, including on return. Nothing pixel-positioned goes stale across a resize on this
   branch. (Independently agrees with A4's numeric resize probe.)
-- **B8 Themes — what was actually rendered.** Contrary to the AGENTS.md caution,
-  `theme="dark"` **did** flip `mne.dark` to `True` under offscreen here: widget background
-  `(0.098, 0.137, 0.176)`, for ragged and fixed. A forced Fusion dark palette gave the same
-  result, so the shots are genuinely dark and the conclusion stands. Ragged dark rendering
-  is correct: separators visible, all four epoch numbers painted.
+- **B8 Themes — what was actually rendered.** `theme="dark"` did flip `mne.dark` to
+  `True` under offscreen here: widget background `(0.098, 0.137, 0.176)`, ragged and fixed.
+  A forced Fusion dark palette gave the same result, so these shots are genuinely dark and
+  the ragged dark rendering is correct: separators visible, all four epoch numbers painted.
+
+  **Correction (coordinator):** this does *not* contradict the AGENTS.md caution, as this
+  report originally claimed. `_qt_get_stylesheet` (`mne/viz/backends/_utils.py:388`)
+  returns an **empty stylesheet** — a silent no-op — when `theme == "auto"`, when
+  `theme == system_theme`, or when qdarkstyle is missing (which only `logger.info`s). This
+  machine's OS theme is *light* and qdarkstyle 3.2.3 is installed, so `theme="dark"`
+  differed from the system and produced a 54 KB stylesheet. On a machine whose OS theme is
+  already dark, `theme="dark"` matches the system, the stylesheet is empty, and the widget
+  inherits the platform palette — which under offscreen/xvfb does not exist, so it falls
+  back to light and `mne.dark` is `False`. Eric's warning holds; it just bites on a
+  dark-themed host rather than because of offscreen as such. **Assert `fig.mne.dark`
+  before trusting any dark screenshot.**
   - Cosmetic, **pre-existing**: the `"Epoch Index"` axis title is clipped at the bottom
     edge in dark — identical on the fixed path (`crop_dark_fixed_axis.png`), absent in
     light on both. Out of scope.

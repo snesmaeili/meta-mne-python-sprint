@@ -41,6 +41,11 @@ and every string in a grab — channel names, epoch numbers, vline labels, axis 
 renders as an empty box. The result looks like a working browser with no text anywhere.
 Any "the screenshot looked fine" without this is worthless.
 
+Same for dark mode: `theme="dark"` is a **silent no-op** when it matches the host's own OS
+theme, or when qdarkstyle is not installed. On a dark-themed host under offscreen you then
+get a *light* render labelled dark. Always assert `fig.mne.dark` before believing a dark
+screenshot.
+
 Qt runs headless under `QT_QPA_PLATFORM=offscreen` — verified working. Do not open real
 windows; several agents run at once.
 
